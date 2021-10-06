@@ -3,12 +3,13 @@
 ##### SVC: dmz-cp
 #
 ## How to run
-# time . ../data/100-dmz/svc-dmz-cp/dca-create.sh
+# cd <root-folder>
+# time . data/svc-lab/dca-create.sh
 #
 #####
 
-config="data/svc-dmz-cp/dca-dmz-cp.cfg.yaml"
-fwconfig="data/svc-dmz-cp/dca-dmz-cp-fw.cfg.yaml"
+config="data/svc-lab/dca-lab.cfg.yaml"
+fwconfig="data/svc-lab/dca-lab-fw.cfg.yaml"
 
 # ansible-playbook playbooks/f5-network.pb.yaml -e @$config -t ip
 # ansible-playbook playbooks/f5vs.pb.yaml -e @$config -t "vs, pool, monitor"

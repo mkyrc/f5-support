@@ -6,7 +6,7 @@
 # DC: dca
 # device: dca_bigip_guestdmz_01, _02
 #
-# service: svc-dmz-cp
+# service: svc-lab01
 # config: fw
 #
 ##
@@ -27,7 +27,7 @@ device02: dca_bigip_guestdmz_02
 # default settings
 # ==========
 default_f5:
-  partition: dmz-cp
+  partition: lab01
   rd: 21
 
 # ==============================
@@ -44,20 +44,15 @@ active_policy:
 policy:
   - name: acl_rd21
     rule_lists:
-      - rl_dmz-cp
+      - rl_lab01
 
 ## address lists
-address_lists:
-  - name: srvNocCa
-    addr:
-      - 10.250.3.73
-      - 10.250.3.75
-      - 10.250.3.77
+# empty
 
 ## rule lists and rules
 rule_lists:
-  - name: "rl_dmz-cp"
-    descr: "service: dmz-cp"
+  - name: "rl_lab01"
+    descr: "service: lab01"
     rules:
       # vip
       - name: in_vip
@@ -75,29 +70,12 @@ rule_lists:
         proto: icmp
         src: [vlan: vlan-3431]
         icmp_message: [type: "0", type: "8", type: "30"]
-      ## toto nie je v BB iba v TJ
-      # - name: in_srvPki
-      #   proto: tcp
-      #   src: [vlan: vlan-3431]
-      #   dst:
-      #     - address: 10.151.194.55
-      #     - port: 80
-      ## toto nie je v BB iba v TJ
-      # - name: in_rservers
-      #   proto: ip
-      #   src: [vlan: vlan-3431]
-      #   dst:
-      #     - address: 10.151.194.41
-      #     - address: 10.151.194.42
-      #     - address: 10.151.194.51
-      #     - address: 10.151.194.52
-      - name: in_snmp
-        proto: udp
+
+      - name: in_ip
+        proto: ip
         src:
           - vlan: vlan-3431
-          - address_list: srvNocCa
-        dst:
-          - port: 161
+
       - name: in_any
         proto: any
         src:
@@ -109,12 +87,7 @@ rule_lists:
         proto: icmp
         src: [vlan: vlan-3211]
         icmp_message: [type: "0", type: "8", type: "30"]
-      - name: out_snmp
-        proto: ip
-        src:
-          - vlan: vlan-3211
-        dst:
-          - address_list: srvNocCa
+
       - name: out_srv
         proto: tcp
         src: [vlan: vlan-3211]
@@ -122,6 +95,11 @@ rule_lists:
           - port: 443
           - address: 10.150.11.42
           - address: 10.151.11.42
+
+      - name: out_ip
+        proto: ip
+        src: [vlan: vlan-3211]
+
       - name: out_any
         proto: any
         src: [vlan: vlan-3211]

@@ -6,7 +6,7 @@
 # DC: dca
 # device: dca_bigip_guestdmz_01, _02
 #
-# service: svc-dmz-cp
+# service: svc-lab01
 # config: nw, ltm
 #
 ##
@@ -27,7 +27,7 @@ device02: dca_bigip_guestdmz_02
 # default settings
 # ==============================
 default_f5:
-  partition: dmz-cp
+  partition: lab01
   rd: 21
 
 # ==============================
@@ -38,15 +38,15 @@ default_f5:
 rds:
   - rd: 21
     vlans:
-      - 3431 # adc
-      - 3211 # srv
+      - 3431 # client side
+      - 3211 # server side
 
 # vlans
 vlans:
   - { tag: 3431, partition: Common, state: absent }
-  - { tag: 3431, partition: dmz-cp }
+  - { tag: 3431, partition: lab01 }
   - { tag: 3211, partition: Common, state: absent }
-  - { tag: 3211, partition: dmz-cp }
+  - { tag: 3211, partition: lab01 }
 
 # IP addresses
 devices:
@@ -131,63 +131,22 @@ vs:
     # snat: automap
     # state: disabled
 
-  # err
-  - name: vs_err-80
-    destination: 10.150.194.50
-    port: 80
-    pool: sf_err-80
-    proto: tcp
-    profiles:
-      - context: client-side
-        name: /Common/f5-tcp-wan
-      - context: server-side
-        name: /Common/f5-tcp-lan
-    persistence: /Common/source_addr
-    # snat: automap
-    # state: disabled
-  - name: vs_err-443
-    destination: 10.150.194.50
-    port: 443
-    pool: sf_err-443
-    proto: tcp
-    profiles:
-      - context: client-side
-        name: /Common/f5-tcp-wan
-      - context: server-side
-        name: /Common/f5-tcp-lan
-    persistence: /Common/source_addr
-    # snat: automap
-    # state: disabled
 
 ## pools
 pools:
   #portal
   - pool: sf_portal-80
     monitors:
-      - mon_portal-80
+      - /Common/http
     members:
-      - { member: ppcp1b, address: 10.150.194.41, port: 80 }
-      - { member: ppcp2b, address: 10.150.194.42, port: 80 }
+      - { member: rserver1, address: 10.150.194.41, port: 80 }
+      - { member: rserver2, address: 10.150.194.42, port: 80 }
   - pool: sf_portal-443
     monitors:
-      - mon_portal-80
-      - mon_portal-443
+      - /Common/https
     members:
-      - { member: ppcp1b, address: 10.150.194.41, port: 443 }
-      - { member: ppcp2b, address: 10.150.194.42, port: 443 }
-  #err
-  - pool: sf_err-80
-    monitors:
-      - /Common/tcp
-    members:
-      - { member: err1, address: 10.150.194.51, port: 80 }
-      - { member: err2, address: 10.150.194.52, port: 80 }
-  - pool: sf_err-443
-    monitors:
-      - /Common/tcp
-    members:
-      - { member: err1, address: 10.150.194.51, port: 443 }
-      - { member: err2, address: 10.150.194.52, port: 443 }
+      - { member: rserver1, address: 10.150.194.41, port: 443 }
+      - { member: rserver2, address: 10.150.194.42, port: 443 }
 
 # monitors
 monitors:
