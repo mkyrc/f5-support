@@ -1,0 +1,66 @@
+---
+## TASKS: NTP servers config
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Description:
+# Create/Delete partition
+#
+## Version:
+# = 1.0 (2021-03-23)
+#   - initial version
+#
+- block:
+    ## TASK in block
+    - name: (tsk) Gather devices
+      bigip_device_info:
+        provider: "{{ provider }}"
+        gather_subset:
+          - devices
+      delegate_to: localhost
+      register: device_facts
+      tags: always
+
+    # - name: (tsk) show)
+    #   debug:
+    #     # var: device_facts.devices[1]['failover_state']
+    #     # var: device_facts.devices
+    #     msg:
+    #       - "bigip_host: {{ bigip_host }}"
+    #       - "DEVICE[0]:"
+    #       - " {{device_facts.devices[0].failover_state}}"
+    #       - " {{device_facts.devices[0].management_address}}"
+    #       - "DEVICE[1]:"
+    #       - " {{device_facts.devices[1].failover_state}}"
+    #       - " {{device_facts.devices[1].management_address}}"
+    #   tags: info
+
+    ## get active member
+    #   not supported in "check mode"
+    - name: "> 01: Define active member variable"
+      set_fact:
+        # active: "{{ item.management_address }}"
+        active_member: true
+      loop: "{{ device_facts.devices }}"
+      when:
+        - device_facts is defined
+        - item.management_address == bigip_host
+        - item.failover_state == 'active'
+        - ansible_check_mode == false
+      no_log: True
+      tags: always
+      ignore_errors: true
+
+    - name: "> 02: Show Active member"
+      debug:
+        msg: "{{bigip_host}} ({{inventory_hostname}})"
+      when:
+        - active_member is defined
+        - active_member == true
+        - ansible_check_mode == false
+      tags: always
+
+  rescue:
+    - fail:
+        msg: "unable to get active member when playbook runs in 'check mode'"

@@ -1,0 +1,15 @@
+---
+# variables for 'bigip' device group
+#
+
+# !! bigips secrets are in vault
+
+# provider: common settings for all bigips
+provider:
+  server: "{{ bigip_host }}"
+  user: "{{ bigip_user}}"
+  password: "{{ bigip_password }}"
+  validate_certs: no
+  server_port: 443
+  transport: rest
+  timeout: 5000  

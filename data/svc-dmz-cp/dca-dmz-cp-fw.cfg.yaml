@@ -1,0 +1,127 @@
+---
+# ==============================
+#  info
+# ==============================
+#
+# DC: dca
+# device: dca_bigip_guestdmz_01, _02
+#
+# service: svc-dmz-cp
+# config: fw
+#
+##
+# author: 
+# - martin kyrc, 2021-09-16
+#
+
+# ==============================
+# inventory
+# ==============================
+bigip_name:
+  - dca_bigip_guestdmz_01
+  - dca_bigip_guestdmz_02
+device01: dca_bigip_guestdmz_01
+device02: dca_bigip_guestdmz_02
+
+# ==========
+# default settings
+# ==========
+default_f5:
+  partition: dmz-cp
+  rd: 21
+
+# ==============================
+# AFM - Firewall config
+# ==============================
+
+## active policy
+active_policy:
+  rd:
+    - rd: 21
+      enforced: acl_rd21
+
+## Policy with Rule List(s)
+policy:
+  - name: acl_rd21
+    rule_lists:
+      - rl_dmz-cp
+
+## address lists
+address_lists:
+  - name: srvNocCa
+    addr:
+      - 10.250.3.73
+      - 10.250.3.75
+      - 10.250.3.77
+
+## rule lists and rules
+rule_lists:
+  - name: "rl_dmz-cp"
+    descr: "service: dmz-cp"
+    rules:
+      # vip
+      - name: in_vip
+        proto: tcp
+        dst:
+          - address: 10.150.194.40
+          - address: 10.150.194.50
+          - port: 80
+          - port: 443
+        src:
+          - vlan: vlan-3431
+
+      # inbound
+      - name: in_icmp
+        proto: icmp
+        src: [vlan: vlan-3431]
+        icmp_message: [type: "0", type: "8", type: "30"]
+      ## toto nie je v BB iba v TJ
+      # - name: in_srvPki
+      #   proto: tcp
+      #   src: [vlan: vlan-3431]
+      #   dst:
+      #     - address: 10.151.194.55
+      #     - port: 80
+      ## toto nie je v BB iba v TJ
+      # - name: in_rservers
+      #   proto: ip
+      #   src: [vlan: vlan-3431]
+      #   dst:
+      #     - address: 10.151.194.41
+      #     - address: 10.151.194.42
+      #     - address: 10.151.194.51
+      #     - address: 10.151.194.52
+      - name: in_snmp
+        proto: udp
+        src:
+          - vlan: vlan-3431
+          - address_list: srvNocCa
+        dst:
+          - port: 161
+      - name: in_any
+        proto: any
+        src:
+          - vlan: vlan-3431
+
+
+      # outbound
+      - name: out_icmp
+        proto: icmp
+        src: [vlan: vlan-3211]
+        icmp_message: [type: "0", type: "8", type: "30"]
+      - name: out_snmp
+        proto: ip
+        src:
+          - vlan: vlan-3211
+        dst:
+          - address_list: srvNocCa
+      - name: out_srv
+        proto: tcp
+        src: [vlan: vlan-3211]
+        dst:
+          - port: 443
+          - address: 10.150.11.42
+          - address: 10.151.11.42
+      - name: out_any
+        proto: any
+        src: [vlan: vlan-3211]

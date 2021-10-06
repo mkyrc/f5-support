@@ -1,0 +1,95 @@
+---
+## TASKS: AFM - Policy
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Description:
+# Create/Delete/Modify Security policies:
+# - global level
+# - routing domain level
+# - virtual server level
+#
+## Tasks list:
+# 01 global                             | #secfwpolicy
+# 02 rd                                 | #secfwpolicy
+# 03 vs                                 | #secfwpolicy
+#
+## Version:
+# = 1.0 (2021-04-06)
+#   - initial version
+# = 1.1 (2001-06-04)
+#   - change: default_f5 variable
+#
+
+## APPLY secpolicy to:
+# - global
+# - rd
+# - vs
+
+## 01 Routing domain
+- name: "> 01: Active policy - Route Domain (rd!=0)"
+  bigip_routedomain:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default(default_f5.partition) }}"
+    #
+    name: "{{ 'rd-' ~ item.rd | default('rd-' ~ (default_f5.rd)|string) }}"
+    fw_enforced_policy: "{{ item.enforced | default(omit) }}"
+  delegate_to: localhost
+  loop: "{{ active_policy.rd }}"
+  when: 
+    - active_policy.rd is defined
+    - active_policy.rd != 0
+  tags:
+    - actpol
+    - actpol_rd
+
+- name: "> 01: Active policy - Route Domain (rd==0)"
+  bigip_routedomain:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default(default_f5.partition) }}"
+    #
+    name: "0"
+    fw_enforced_policy: "{{ item.enforced | default(omit) }}"
+  delegate_to: localhost
+  loop: "{{ active_policy.rd }}"
+  when: 
+    - active_policy.rd is defined
+    - active_policy.rd == 0
+  tags:
+    - actpol
+    - actpol_rd    
+
+#
+#! INFO: VS and Global not used:
+#
+# ## 02 Virtual Server
+# - name: "> 02: Active policy - Virtual Server"
+#   bigip_virtual_server:
+#     provider: "{{ provider }}"
+#     name: "{{ item.vs }}"
+#     partition: "{{ item.partition }}"
+#     firewall_enforced_policy: "{{ item.enforced | default(omit) }}"
+#     firewall_staged_policy: "{{ item.staged | default(omit) }}"
+#   delegate_to: localhost
+#   loop: "{{ active_policy.vs }}"
+#   when: 
+#     - active_policy.vs is defined
+#   tags:
+#     - actpol
+#     - actpol_vs
+
+# ## 03 Global Policy
+# - name: "> 03: Active policy - Global"
+#   bigip_firewall_global_rules:
+#     provider: "{{ provider }}"
+#     enforced_policy: "{{ item.enforced | default()}}"
+#     staged_policy: "{{ item.staged | default() }}"
+#   delegate_to: localhost
+#   loop: "{{ active_policy.rd }}"
+#   when: 
+#     - active_policy.global is defined
+#   tags:
+#     - actpol
+#     - actpol_global
+

@@ -1,0 +1,41 @@
+---
+## TASKS: f5 AFM - Port list(s)
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Description:
+# Create/modify/delete Port list(s)
+#
+## Tasks list:
+# 01 address lists                      | #addrlist
+#
+## Version:
+# = 1.0 (2021-05-17)
+#   - initial version
+# = 1.1 (2001-06-04)
+#   - change: default_f5 variable
+#
+
+# 01 Port list
+# @description:
+#   - port, port_range - empty value is not permited!!
+#   - partition must be "Common"
+# TODO: rozhodnut ako s partition
+- name: "> 01: Port list"
+  bigip_firewall_port_list:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default(default_f5.partition) }}"
+    #
+    name: "{{ item.name | mandatory }}"
+    description: "{{ item.descr | default() }}"
+    ports: "{{ item.port | default(omit) }}"
+    port_ranges: "{{ item.port_range | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  delegate_to: localhost
+  loop: "{{ port_lists }}"
+  when: 
+    - port_lists is defined
+  tags:
+    - port_list    
+

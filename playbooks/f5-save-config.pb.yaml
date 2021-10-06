@@ -1,0 +1,58 @@
+---
+## PLAYBOOK: F5 save configuration
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Description:
+#   Save config.
+#
+## how to run
+#
+# ansible-playbook playbooks/f5-save-config.pb.yaml -e "@<path_to_config_file.cfg.yaml>"
+
+- name: F5 save config
+  hosts: "{{ bigip_name }}"
+  connection: local
+  gather_facts: no
+
+  # vars_files:
+    # - "{{ f5vs_cfgfile }}"  # service specific config file
+      
+###################
+  # PRE_TASKS
+  ###################
+  pre_tasks:
+    ## show settings
+    - name: "{{pb_prfx}}: Show settings"
+      debug:
+        msg:
+          - "host (name): '{{ inventory_hostname }}'"
+          - "host (ip):   '{{ bigip_host }}'"
+      tags: always
+
+    ## active member
+    #   It works only WITHOUT "--check, -C" arguments
+    # - name: "{{pb_prfx}}: Getting active device member"
+    #   include_tasks: f5/get-ha-active.tsk.yaml
+    #   tags: always
+
+    ## pause
+    - name: Continue?
+      pause:
+        seconds: 10
+      tags: always
+
+    # /block end
+
+  ###################
+  # TASKS
+  ###################      
+  tasks:
+    - name: Save config on '{{ bigip_name }}'
+      bigip_config:
+        save: yes
+        provider: "{{ provider }}"
+      delegate_to: localhost
+      tags:
+        - save

@@ -1,0 +1,157 @@
+---
+## PLAYBOOK: Create f5 AFM objects
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Pre-Tasks list:
+# - show settings
+# - get active member (error with "--check|-C" arguments)
+# - pause
+#
+## Tasks:
+# 01 Lists (active member)
+# 01-01
+# include f5/afm-addrlist.tsk.yaml
+#   01 adddress list(s)                 |  #addr_lists
+#
+# 01-02
+# include f5/afm-portlist.tsk.yaml
+#   01 port list(s)                     | #port_lists
+#
+# 02 Rule list(s) and Rules (active member)
+# include f5/afm-02-rules.tsk.yaml
+#   01 rule list(s)                     | #rules, rulelist
+#   02 rule(s)                          | #rules, rule
+#
+# 03 Security Policy
+# include f5/afm-03-policy.tsk.yaml
+#   01 create security policy           | #policy
+#   02 add rules into security policy   | #policy, policy_rl
+#
+# 04 Active Policy
+# include f5/afm-04-activepolicy.tsk.yaml
+#   01 routing domain                   | #actpol, actpol_rd
+#   02 virtual server (disabled)        | #actpol, actpol_vs
+#   03 global         (disabled)        | #actpol, actpol_global
+#
+## Versioning:
+# = 1.0 (2020-10-23)
+#   - initial version
+# = 1.1 (2021-04-06)
+#   - migrate from playbook file to task file
+#   - new config hierarchy for RL/Rules, Security Policies and Active Policies
+#
+
+- name: === F5 AFM ===
+  hosts: "{{ bigip_name }}"
+  connection: local
+  gather_facts: no
+
+  vars:
+    pb_prfx: "F5AFM"
+
+  ###################
+  # PRE_TASKS
+  ###################
+  pre_tasks:
+    ## show settings
+    - name: "{{pb_prfx}}: Show settings"
+      debug:
+        msg:
+          - "host (name): '{{ inventory_hostname }}'"
+          - "host (ip):   '{{ bigip_host }}'"
+      tags: always
+
+    ## active member
+    #   It works only WITHOUT "--check, -C" arguments
+    - name: "{{pb_prfx}}: Getting active device member"
+      include_tasks: f5/get-ha-active.tsk.yaml
+      tags: always
+
+    ## pause
+    - name: Continue?
+      pause:
+        seconds: 10
+      tags: always
+
+    # /block end
+
+  ###################
+  # TASKS
+  ###################
+
+  tasks:
+    ## 01 Address and Port list(s)
+    - block:
+        ## 01 Address list
+        - name: "{{pb_prfx}}-01-01: Address list(s)"
+          include_tasks: f5/afm-addrlist.tsk.yaml
+          when: address_lists is defined
+          tags:
+            - addr_list
+
+        ## 02 Port list
+        - name: "{{pb_prfx}}-01-02: Port list(s)"
+          include_tasks: f5/afm-portlist.tsk.yaml
+          when: port_lists is defined
+          tags:
+            - port_list            
+
+      when:
+        - active_member is defined
+        - active_member == true
+
+    # /block (address and port list(s))
+
+    ## 02 Rule lists and Rules
+    - block:
+        ## 02-01 Rule list(s) with Rule(s)
+        - name: "{{pb_prfx}}-02-01: Rule List(s) with Rule(s)"
+          include_tasks: f5/afm-rulelist.tsk.yaml
+          when: rule_lists is defined
+          tags:
+            - rules
+            - rulelist
+            - rule
+
+      when:
+        - active_member is defined
+        - active_member == true
+
+    # /block (rule lists and rules)
+
+    ## 03 Security policy
+    - block:
+
+        ## 03-01 Security Policy
+        - name: "{{pb_prfx}}-03-01: Security Policy"
+          include_tasks: f5/afm-policy.tsk.yaml
+          when: policy is defined
+          tags:
+            - policy
+            - policy_rl
+
+      when:
+        - active_member is defined
+        - active_member == true
+
+    # /block
+
+    ## 03 apply security policy
+    - block:
+        ## 03-01 Apply Security policy
+        - name: "{{pb_prfx}}-03-01: Apply Sec Policy"
+          include_tasks: f5/afm-activepolicy.tsk.yaml
+          when:
+            - active_policy.vs is defined
+              or active_policy.rd is defined
+              or active_policy.global is defined
+          tags:
+            - actpol
+
+      when:
+        - active_member is defined
+        - active_member == true
+
+    # /block (apply sec policy)

@@ -1,0 +1,38 @@
+---
+## TASKS: AFM - Address list(s)
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Description:
+# Create/modify/delete Address list(s)
+#
+## Tasks list:
+# 01 address lists                      | #addrlist
+#
+## Version:
+# = 1.0 (2021-05-17)
+#   - initial version
+# = 1.1 (2001-06-04)
+#   - change: default_f5 variable
+#
+
+## 01 Create address list
+#   - addresses, address_ranges - empty value is not permited!!
+# TODO: rozhodnut ako s partition
+- name: "> 01: Address list(s)"
+  bigip_firewall_address_list:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default(default_f5.partition) }}"
+    #
+    name: "{{ item.name | mandatory }}"
+    description: "{{ item.descr | default() }}"
+    addresses: "{{ item.addr | default(omit) }}"
+    address_ranges: "{{ item.addr_range | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  delegate_to: localhost
+  loop: "{{ address_lists }}"
+  when: 
+    - address_lists is defined
+  tags:
+    - addr_list

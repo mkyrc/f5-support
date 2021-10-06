@@ -1,0 +1,208 @@
+---
+# ==============================
+#  info
+# ==============================
+#
+# DC: dca
+# device: dca_bigip_guestdmz_01, _02
+#
+# service: svc-dmz-cp
+# config: nw, ltm
+#
+##
+# author:
+# - martin kyrc, 2021-09-16
+#
+
+# ==============================
+# inventory
+# ==============================
+bigip_name:
+  - dca_bigip_guestdmz_01
+  - dca_bigip_guestdmz_02
+device01: dca_bigip_guestdmz_01
+device02: dca_bigip_guestdmz_02
+
+# ==============================
+# default settings
+# ==============================
+default_f5:
+  partition: dmz-cp
+  rd: 21
+
+# ==============================
+# networking
+# ==============================
+
+# rds
+rds:
+  - rd: 21
+    vlans:
+      - 3431 # adc
+      - 3211 # srv
+
+# vlans
+vlans:
+  - { tag: 3431, partition: Common, state: absent }
+  - { tag: 3431, partition: dmz-cp }
+  - { tag: 3211, partition: Common, state: absent }
+  - { tag: 3211, partition: dmz-cp }
+
+# IP addresses
+devices:
+  device01:
+    ips:
+      - vlan: 3431
+        ip: 10.150.221.156
+        netmask: 255.255.255.240
+        allow: [icmp]
+
+      # - [vlan: 3211, state: absent]
+      - vlan: 3211
+        # ip: 10.150.194.57 # .34
+        ip: 10.150.194.34
+        netmask: 255.255.255.224
+        allow: [icmp]
+  device02:
+    ips:
+      - vlan: 3431
+        ip: 10.150.221.157
+        netmask: 255.255.255.240
+        allow: [icmp]
+      - vlan: 3431
+        ip: 10.150.221.158
+        netmask: 255.255.255.240
+        float: true
+        allow: [icmp]
+
+      # - [vlan: 3211, state: absent]
+      - vlan: 3211
+        # ip: 10.150.194.58 #.35
+        ip: 10.150.194.35
+        netmask: 255.255.255.224
+        allow: [icmp]
+      - vlan: 3211
+        # ip: 10.150.194.59 #.33
+        ip: 10.150.194.33
+        netmask: 255.255.255.224
+        float: true
+        allow: [icmp]
+
+routes:
+  - { name: dgw-rd21, dst: 0.0.0.0, mask: 0.0.0.0, gw: 10.150.221.145 }
+
+# ==============================
+# LTM - Virtual Server config
+# ==============================
+
+## virtual servers - add
+vs:
+  - name: fwd_rd21
+    destination: 0.0.0.0/0
+    port: any
+    forwarder: true
+    # state: disabled
+
+  # portal
+  - name: vs_portal-80
+    destination: 10.150.194.40
+    port: 80
+    pool: sf_portal-80
+    proto: tcp
+    profiles:
+      - context: client-side
+        name: /Common/f5-tcp-wan
+      - context: server-side
+        name: /Common/f5-tcp-lan
+    persistence: /Common/source_addr
+    # snat: automap
+    # state: disabled
+  - name: vs_portal-443
+    destination: 10.150.194.40
+    port: 443
+    pool: sf_portal-443
+    proto: tcp
+    profiles:
+      - context: client-side
+        name: /Common/f5-tcp-wan
+      - context: server-side
+        name: /Common/f5-tcp-lan
+    persistence: /Common/source_addr
+    # snat: automap
+    # state: disabled
+
+  # err
+  - name: vs_err-80
+    destination: 10.150.194.50
+    port: 80
+    pool: sf_err-80
+    proto: tcp
+    profiles:
+      - context: client-side
+        name: /Common/f5-tcp-wan
+      - context: server-side
+        name: /Common/f5-tcp-lan
+    persistence: /Common/source_addr
+    # snat: automap
+    # state: disabled
+  - name: vs_err-443
+    destination: 10.150.194.50
+    port: 443
+    pool: sf_err-443
+    proto: tcp
+    profiles:
+      - context: client-side
+        name: /Common/f5-tcp-wan
+      - context: server-side
+        name: /Common/f5-tcp-lan
+    persistence: /Common/source_addr
+    # snat: automap
+    # state: disabled
+
+## pools
+pools:
+  #portal
+  - pool: sf_portal-80
+    monitors:
+      - mon_portal-80
+    members:
+      - { member: ppcp1b, address: 10.150.194.41, port: 80 }
+      - { member: ppcp2b, address: 10.150.194.42, port: 80 }
+  - pool: sf_portal-443
+    monitors:
+      - mon_portal-80
+      - mon_portal-443
+    members:
+      - { member: ppcp1b, address: 10.150.194.41, port: 443 }
+      - { member: ppcp2b, address: 10.150.194.42, port: 443 }
+  #err
+  - pool: sf_err-80
+    monitors:
+      - /Common/tcp
+    members:
+      - { member: err1, address: 10.150.194.51, port: 80 }
+      - { member: err2, address: 10.150.194.52, port: 80 }
+  - pool: sf_err-443
+    monitors:
+      - /Common/tcp
+    members:
+      - { member: err1, address: 10.150.194.51, port: 443 }
+      - { member: err2, address: 10.150.194.52, port: 443 }
+
+# monitors
+monitors:
+  http:
+    - name: mon_portal-80
+      send: "GET /wps/themeModules/themes/html/dynamicSpots/icons/blank.gif HTTP/1.0\r\nCache-Control: no-cache"
+      receive: "200 OK"
+      port: 80
+      interval: 10
+      timeout: 21
+  https:
+    - name: mon_portal-443
+      send: "GET /wps/themeModules/themes/html/dynamicSpots/icons/blank.gif HTTP/1.0\r\nCache-Control: no-cache"
+      receive: "200 OK"
+      port: 443
+      interval: 10
+      timeout: 21
+      timeup: 31

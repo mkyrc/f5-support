@@ -1,0 +1,71 @@
+---
+## TASKS: AFM - Rule list(s) and Rules(s)
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Description:
+# Create/modify/delete Rules list(s) and/or Rule(s)
+#
+## Tasks list:
+# 01 rule lists                         | #secfwpolicy
+# 02 rules                              | #secfwpolicy
+#
+## Version:
+# = 1.0 (2021-03-31)
+#   - initial version
+# = 1.1 (2001-06-04)
+#   - change: default_f5 variable
+#
+
+## 01 Rule list(s)
+- name: "> 01: Rule List(s)"
+  bigip_firewall_rule_list:
+    provider: "{{ provider }}"
+    partition: "{{ item.partition | default(default_f5.partition) }}"
+    #
+    name: "{{ item.name | mandatory }}"
+    description: "{{ item.descr | default(omit) }}"
+    rules: "{{ item.rule | default(omit) }}"
+    state: "{{ item.state | default ('present') }}"
+  delegate_to: localhost
+  loop: "{{ rule_lists }}"
+  loop_control:
+    label:
+      - "{{item.name}}"
+      - "{{item.descr|default()}}"
+      - "{{item.state|default('present')}}"
+  when: rule_lists is defined
+  tags:
+    - rules
+    - rulelist
+
+## 02 Rule(s)
+# @notes:
+# - for source/destination values refer documentation
+- name: "> 02: Rule(s)"
+  bigip_firewall_rule:
+    provider: "{{ provider }}"
+    partition: "{{ item[1].partition | default(default_f5.partition) }}"
+    #
+    parent_rule_list: "{{ item[0].name | mandatory }}"
+    name: "{{ item[1].name | mandatory }}"
+    protocol: "{{ item[1].proto | default('Any')}}"
+    action: "{{ item[1].action | default('accept-decisively') }}"
+    source: "{{ item[1].src | default(omit) }}"
+    destination: "{{ item[1].dst | default(omit) }}"
+    icmp_message: "{{ item[1].icmp_message | default(omit) }}"
+    status: "{{ item[1].status | default('enabled') }}"
+    logging: "{{ item[1].log | default('no') }}"
+  delegate_to: localhost
+  with_subelements:
+    - "{{ rule_lists }}"
+    - "rules"
+    - skip_missing: True
+  when:
+    - rule_lists is defined
+    # - item[0].rules is defined
+    - item[0].state is undefined or item[0].state != 'absent'
+  tags:
+    - rules
+    - rule

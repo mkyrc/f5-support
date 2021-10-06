@@ -1,0 +1,52 @@
+---
+## TASKS: AFM - Policy
+#
+## Author:
+#   - Martin Kyrc, martin.kyrc@soitron.com
+#
+## Description:
+# Create/modify/delete Rules list(s) and/or Rule(s)
+#
+## Tasks list:
+# 01 FW policy/ies                      | #policy
+# 02 FW rule lists                      | #policy, policy_rl
+#
+## Version:
+# = 1.0 (2021-04-06)
+#   - initial version
+## vlan(s)
+
+#
+
+        ## 01 Create firewall POLICY
+        # - bigip_firewall_policy module can't add rule list directly
+        - name: "> 01: Policy - Create/Delete policy"
+          bigip_firewall_policy:
+            provider: "{{ provider }}"
+            partition: "{{ item.partition | default(default_f5.partition) }}"
+            #
+            name: "{{ item.name | mandatory }}"
+            description: "{{ item.descr | default(omit) }}"
+            state: "{{ item.state | default('present') }}"
+          delegate_to: localhost
+          loop: "{{ policy }}"
+          when: policy is defined
+          tags:
+            - policy
+
+        ## 02 Add rule list to policy
+        - name: "> 02: Policy - Add/Remove rule list(s)"
+          bigip_firewall_rule:
+            provider: "{{ provider }}"
+            partition: "{{ item[0].partition | default(default_f5.partition) }}"
+            #
+            name: "{{ item[1] }}"
+            parent_policy: "{{ item[0].name | mandatory }}"
+            rule_list: "{{ item[1] }}"
+          delegate_to: localhost
+          with_subelements:
+            - "{{ policy }}"
+            - "rule_lists"
+          tags:
+            - policy
+            - policy_rules
